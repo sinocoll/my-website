@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聚合搜索 - JUHE SO</title>
+    <style>
+        :root {
+            --google-blue: #4285f4;
+            --youtube-red: #ff0000;
+            --bilibili-pink: #fb7299;
+            --douyin-red: #fe2c55;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            background: #f0f2f5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 4vh 2vw;
+        }
+
+        .search-container {
+            width: 100%;
+            max-width: 680px;
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            transition: transform 0.2s ease;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1a1a1a;
+            margin-bottom: 1.5rem;
+            font-size: 2.2rem;
+            background: linear-gradient(45deg, 
+                var(--google-blue), 
+                var(--youtube-red), 
+                var(--bilibili-pink), 
+                var(--douyin-red));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        #searchInput {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            margin-bottom: 1.2rem;
+        }
+
+        #searchInput:focus {
+            border-color: var(--google-blue);
+            box-shadow: 0 0 0 3px rgba(66,133,244,0.15);
+        }
+
+        .platform-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .platform-label {
+            display: flex;
+            align-items: center;
+            padding: 0.6rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #f8f9fa;
+            border: 2px solid transparent;
+        }
+
+        .platform-label:hover {
+            transform: translateY(-2px);
+        }
+
+        .platform-label[data-platform="google"]:hover { border-color: var(--google-blue); }
+        .platform-label[data-platform="youtube"]:hover { border-color: var(--youtube-red); }
+        .platform-label[data-platform="bilibili"]:hover { border-color: var(--bilibili-pink); }
+        .platform-label[data-platform="douyin"]:hover { border-color: var(--douyin-red); }
+
+        .platform-label input {
+            margin-right: 0.6rem;
+        }
+
+        #searchButton {
+            width: 100%;
+            padding: 0.9rem;
+            background: linear-gradient(135deg, var(--google-blue), var(--bilibili-pink));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #searchButton:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        #searchButton::after {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, 
+                transparent, 
+                rgba(255,255,255,0.2), 
+                transparent);
+            transform: rotate(45deg);
+            animation: shine 2s infinite;
+        }
+
+        @keyframes shine {
+            0% { left: -50%; }
+            100% { left: 150%; }
+        }
+
+        @media (max-width: 480px) {
+            .search-container {
+                padding: 1.2rem;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .platform-label {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <h1>聚合搜索</h1>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="输入关键词后选择搜索平台...">
+            <div class="platform-selector">
+                <label class="platform-label" data-platform="google">
+                    <input type="checkbox" name="platform" value="google" checked>
+                    Google
+                </label>
+                <label class="platform-label" data-platform="youtube">
+                    <input type="checkbox" name="platform" value="youtube">
+                    YouTube
+                </label>
+                <label class="platform-label" data-platform="bilibili">
+                    <input type="checkbox" name="platform" value="bilibili">
+                    BiliBili
+                </label>
+                <label class="platform-label" data-platform="douyin">
+                    <input type="checkbox" name="platform" value="douyin">
+                    抖音
+                </label>
+            </div>
+            <button id="searchButton" onclick="performSearch()">一键搜索</button>
+        </div>
+    </div>
+
+    <script>
+        const searchUrls = {
+            google: query => `https://www.google.com/search?q=${encodeURIComponent(query)}`,
+            youtube: query => `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+            bilibili: query => `https://search.bilibili.com/all?keyword=${encodeURIComponent(query)}`,
+            douyin: query => `https://www.douyin.com/search/${encodeURIComponent(query)}?type=general`
+        };
+
+        async function performSearch() {
+            const button = document.getElementById('searchButton');
+            button.disabled = true;
+            
+            const query = document.getElementById('searchInput').value.trim();
+            const platforms = Array.from(document.querySelectorAll('input[name="platform"]:checked'))
+                                 .map(checkbox => checkbox.value);
+
+            if (!query) {
+                alert('请输入搜索关键词');
+                button.disabled = false;
+                return;
+            }
+
+            if (platforms.length === 0) {
+                alert('请至少选择一个搜索平台');
+                button.disabled = false;
+                return;
+            }
+
+            // 异步打开标签页
+            for (const platform of platforms) {
+                const url = searchUrls[platform](query);
+                await new Promise(resolve => {
+                    setTimeout(() => {
+                        window.open(url, '_blank');
+                        resolve();
+                    }, 100);
+                });
+            }
+
+            button.disabled = false;
+        }
+
+        // 回车键触发搜索
+        document.getElementById('searchInput').addEventListener('keypress', e => {
+            if (e.key === 'Enter') performSearch();
+        });
+    </script>
+</body>
+</html>
